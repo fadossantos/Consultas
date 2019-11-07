@@ -1,6 +1,5 @@
 package br.gov.sp.policiamilitar.seccom.Consultas;
 
-import br.gov.sp.policiamilitar.seccom.Consultas.repository.InteressadoRepository;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 

@@ -1,11 +1,11 @@
 buildscript {
 	ext {
-		springBootVersion = '2.0.0.M7'
+		springBootVersion = '2.1.2.RELEASE'
 	}
 	repositories {
 		mavenCentral()
-		maven { url "https://repo.spring.io/snapshot" }
-		maven { url "https://repo.spring.io/milestone" }
+		// maven { url "https://repo.spring.io/snapshot" }
+		// maven { url "https://repo.spring.io/milestone" }
 	}
 	dependencies {
 		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
@@ -19,18 +19,81 @@ apply plugin: 'io.spring.dependency-management'
 
 repositories {
 	mavenCentral()
-	maven { url "https://repo.spring.io/snapshot" }
-	maven { url "https://repo.spring.io/milestone" }
+	//maven { url "https://repo.spring.io/snapshot" }
+	//maven { url "https://repo.spring.io/milestone" }
 }
 
+configurations {
+	jaxb
+}
+
+// tag::wsdl[]
+task genJaxb {
+	ext.sourcesDir = "${buildDir}/generated-sources/jaxb"
+	ext.classesDir = "${buildDir}/classes/jaxb"
+	ext.schema = "http://webserviceshom.intranet.policiamilitar.sp.gov.br/WSSCPM/Service.asmx?WSDL"
+
+	outputs.dir classesDir
+
+	doLast() {
+		project.ant {
+			taskdef name: "xjc", classname: "com.sun.tools.xjc.XJCTask",
+					classpath: configurations.jaxb.asPath
+			mkdir(dir: sourcesDir)
+			mkdir(dir: classesDir)
+
+			xjc(destdir: sourcesDir, schema: schema,
+					package: "br.gov.sp.pmesp.wsscpm") {
+				arg(value: "-wsdl")
+				produces(dir: sourcesDir, includes: "**/*.java")
+			}
+
+			javac(destdir: classesDir, source: 1.8, target: 1.8, debug: true,
+					debugLevel: "lines,vars,source",
+					classpath: configurations.jaxb.asPath) {
+				src(path: sourcesDir)
+				include(name: "**/*.java")
+				include(name: "*.java")
+			}
+
+			copy(todir: classesDir) {
+				fileset(dir: sourcesDir, erroronmissingdir: false) {
+					exclude(name: "**/*.java")
+				}
+			}
+		}
+	}
+}
 
 dependencies {
-    compile('org.springframework.boot:spring-boot-starter')
+	compile 'io.springfox:springfox-swagger2:2.9.2'
+	compile 'io.springfox:springfox-swagger-ui:2.9.2'
+
+	compile('org.springframework.boot:spring-boot-starter')
 	compile('org.springframework.boot:spring-boot-starter-data-jpa')
 	compile('org.springframework.boot:spring-boot-starter-web')
-	compile('com.microsoft.sqlserver:mssql-jdbc:6.3.5.jre8-preview')
+	implementation('org.springframework.boot:spring-boot-starter-web-services')
+
+	// compile('com.microsoft.sqlserver:mssql-jdbc:6.3.5.jre8-preview')
+	compile('com.microsoft.sqlserver:mssql-jdbc:7.3.1.jre8-preview')
+
 	compile('org.apache.poi:poi:3.17')
-	compile('javax.xml.bind:jaxb-api:2.3.0')
+	compile('javax.xml.bind:jaxb-api:2.3.1')
+
+	compile(files(genJaxb.classesDir).builtBy(genJaxb))
+	jaxb "com.sun.xml.bind:jaxb-xjc:2.1.7"
 
 	testCompile('org.springframework.boot:spring-boot-starter-test')
+
+	compile('javax.xml.ws:jaxws-api:2.3.1')
+	compile('javax.jws:jsr181-api:1.0-MR1')
+	compile('javax.xml.bind:jaxb-api:2.4.0-b180830.0359')
+	compile('com.sun.xml.bind:jaxb-impl:2.4.0-b180830.0438')
+	compile('com.sun.istack:istack-commons-runtime:3.0.8')
+	compile('com.sun.xml.txw2:txw2:20110809')
+	compile('com.sun.xml.messaging.saaj:saaj-impl:1.5.1')
+
+// https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient
+	compile('org.apache.httpcomponents:httpclient:4.5.10')
+
 }
